@@ -6,13 +6,14 @@ import { SubmissionMetadata } from '../types';
  * Listens to submission events from content scripts and dispatches to SyncQueue.
  */
 
-chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (message && typeof message === 'object' && 'type' in message) {
     const msg = message as { type: string; payload?: SubmissionMetadata };
     
     if (msg.type === 'SUBMISSION_ACCEPTED' && msg.payload) {
       console.warn('Background received SUBMISSION_ACCEPTED event for:', msg.payload.problemTitle);
-      SyncQueue.enqueue(msg.payload);
+      const tabId = sender.tab ? sender.tab.id : undefined;
+      SyncQueue.enqueue(msg.payload, tabId);
       sendResponse({ status: 'QUEUED' });
     } else {
       sendResponse({ status: 'ACK' });

@@ -1,6 +1,7 @@
 import { SubmissionMetadata } from '../types';
 import { extractTitleSlug, normalizeDifficulty, getFileExtension } from './parser';
 import { injectMainWorldInterceptor } from './injected';
+import { ToastManager } from './toast';
 
 let lastSyncedTimestamp = 0;
 
@@ -94,14 +95,31 @@ function triggerSync(meta: SubmissionMetadata): void {
   lastSyncedTimestamp = now;
 
   console.warn('Syncing accepted LeetCode submission to GitHub:', meta.problemTitle);
+  ToastManager.showUploading(meta.problemTitle);
 
   chrome.runtime.sendMessage({
     type: 'SUBMISSION_ACCEPTED',
     payload: meta,
   }).catch(() => {
-    // Ignore runtime connection disconnected errors
+    ToastManager.showError('Extension background worker disconnected.');
   });
 }
+
+// Listen to messages from background worker
+chrome.runtime.onMessage.addListener((message: unknown) => {
+  if (message && typeof message === 'object' && 'type' in message) {
+    const msg = message as { type: string; payload?: { status?: string; title?: string; error?: string } };
+    if (msg.type === 'GITLEET_SYNC_STATUS' && msg.payload) {
+      if (msg.payload.status === 'SUCCESS') {
+        ToastManager.showSuccess(msg.payload.title || 'Solution');
+      } else if (msg.payload.status === 'SKIPPED') {
+        // Silently ignore duplicate skip or show mild toast
+      } else if (msg.payload.status === 'ERROR') {
+        ToastManager.showError(msg.payload.error || 'Upload failed');
+      }
+    }
+  }
+});
 
 window.addEventListener('message', (event) => {
   if (event.source !== window || !event.data || typeof event.data !== 'object') return;

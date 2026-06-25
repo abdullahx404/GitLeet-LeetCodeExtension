@@ -5,6 +5,11 @@ import { buildGitHubPath, extractTitleSlug } from '../content/parser';
 import { utf8ToBase64 } from '../utils';
 import { ReadmeGenerator } from './readmeGenerator';
 
+export interface QueueItem {
+  meta: SubmissionMetadata;
+  tabId?: number;
+}
+
 /**
  * Computes a fast deterministic 32-bit integer hash of a string, formatted as hex.
  * Used for smart code deduplication.
@@ -15,7 +20,7 @@ export function computeCodeHash(code: string): string {
   for (let i = 0; i < norm.length; i++) {
     const char = norm.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   return Math.abs(hash).toString(16).padStart(8, '0');
 }
@@ -24,14 +29,23 @@ export function computeCodeHash(code: string): string {
  * Orchestrator managing sequential asynchronous synchronization of accepted LeetCode solutions.
  */
 export class SyncQueue {
-  private static queue: SubmissionMetadata[] = [];
+  private static queue: QueueItem[] = [];
   private static isProcessing = false;
+
+  private static notifyTab(tabId: number | undefined, payload: { status: 'SUCCESS' | 'SKIPPED' | 'ERROR'; title?: string; error?: string }): void {
+    if (tabId !== undefined && chrome.tabs && chrome.tabs.sendMessage) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'GITLEET_SYNC_STATUS',
+        payload,
+      }).catch(() => {});
+    }
+  }
 
   /**
    * Pushes a new accepted submission item into the processing queue.
    */
-  public static enqueue(meta: SubmissionMetadata): void {
-    this.queue.push(meta);
+  public static enqueue(meta: SubmissionMetadata, tabId?: number): void {
+    this.queue.push({ meta, tabId });
     void this.processNext();
   }
 
@@ -64,9 +78,11 @@ export class SyncQueue {
     }
 
     try {
-      await this.syncSubmission(item);
+      await this.syncSubmission(item.meta, item.tabId);
     } catch (err) {
       console.error('Error synchronizing submission to GitHub:', err);
+      const errMsg = err instanceof Error ? err.message : 'Unknown REST failure';
+      this.notifyTab(item.tabId, { status: 'ERROR', error: errMsg });
     } finally {
       this.isProcessing = false;
       if (this.queue.length > 0) {
@@ -78,10 +94,11 @@ export class SyncQueue {
   /**
    * Core synchronization logic executing deduplication check and GitHub REST upload.
    */
-  public static async syncSubmission(meta: SubmissionMetadata): Promise<boolean> {
+  public static async syncSubmission(meta: SubmissionMetadata, tabId?: number): Promise<boolean> {
     const settings = await StorageService.getSettings();
     if (!settings || !settings.autoSyncEnabled || !settings.githubToken) {
       console.warn('Sync aborted: User settings unconfigured or auto-sync disabled.');
+      this.notifyTab(tabId, { status: 'ERROR', error: 'GitLeet settings unconfigured or auto-sync disabled.' });
       return false;
     }
 
@@ -91,6 +108,7 @@ export class SyncQueue {
 
     if (existingCacheItem && existingCacheItem.codeHash === currentHash) {
       console.warn(`Problem ${meta.problemNumber} skipped: Identical solution hash already uploaded.`);
+      this.notifyTab(tabId, { status: 'SKIPPED', title: meta.problemTitle });
       return false;
     }
 
@@ -123,7 +141,6 @@ export class SyncQueue {
     await StorageService.updateCacheProblem(updatedProblem);
     await this.updateSyncStats(meta);
 
-    // Trigger dynamic README generation and upload
     try {
       const latestStats = await StorageService.getStats();
       const latestCache = await StorageService.getCache();
@@ -138,12 +155,12 @@ export class SyncQueue {
         base64Md,
         'Update repository README index'
       );
-      console.warn('Successfully refreshed repository README dashboard table.');
     } catch (readmeErr) {
       console.error('Failed to update repository README index:', readmeErr);
     }
 
     console.warn(`Successfully synchronized ${meta.problemTitle} to GitHub.`);
+    this.notifyTab(tabId, { status: 'SUCCESS', title: meta.problemTitle });
     return true;
   }
 

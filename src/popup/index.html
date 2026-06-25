@@ -5,23 +5,212 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LeetCode Sync Dashboard</title>
   <style>
+    :root {
+      --bg-main: #0d1117;
+      --bg-card: rgba(22, 27, 34, 0.75);
+      --border-color: rgba(48, 54, 61, 0.8);
+      --text-main: #e6edf3;
+      --text-muted: #8b949e;
+      --color-easy: #3fb950;
+      --color-medium: #d29922;
+      --color-hard: #f85149;
+      --color-accent: #58a6ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       width: 360px;
-      height: 460px;
-      margin: 0;
-      background: #0d1117;
-      color: #c9d1d9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 460px;
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
       display: flex;
       flex-direction: column;
+      gap: 16px;
+    }
+
+    header {
+      display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .brand {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.3px;
+    }
+
+    .settings-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .settings-btn:hover {
+      color: var(--text-main);
+      border-color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .hero-stat {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .hero-stat .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .hero-stat .val {
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--color-accent);
+      line-height: 1;
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .diff-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .diff-card .num {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .easy .num { color: var(--color-easy); }
+    .medium .num { color: var(--color-medium); }
+    .hard .num { color: var(--color-hard); }
+
+    .diff-card .tag {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .last-synced {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .last-synced .header {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .last-synced .prob-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .last-synced .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .lang-pill {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--color-accent);
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+
+    .footer {
+      margin-top: auto;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
     }
   </style>
 </head>
 <body>
-  <h1>GitLeet Dashboard</h1>
-  <p id="status">Status: Initializing...</p>
+  <header>
+    <div class="brand">GitLeet Sync</div>
+    <button class="settings-btn" id="open-settings">Settings</button>
+  </header>
+
+  <div class="hero-stat">
+    <div class="label">Total Solved & Synced</div>
+    <div class="val" id="total-solved">0</div>
+  </div>
+
+  <div class="diff-grid">
+    <div class="diff-card easy">
+      <div class="tag">Easy</div>
+      <div class="num" id="easy-cnt">0</div>
+    </div>
+    <div class="diff-card medium">
+      <div class="tag">Medium</div>
+      <div class="num" id="medium-cnt">0</div>
+    </div>
+    <div class="diff-card hard">
+      <div class="tag">Hard</div>
+      <div class="num" id="hard-cnt">0</div>
+    </div>
+  </div>
+
+  <div class="last-synced">
+    <div class="header">Last Synced Solution</div>
+    <div class="prob-title" id="last-title">None yet</div>
+    <div class="meta">
+      <span class="lang-pill" id="last-lang">-</span>
+      <span id="last-time">-</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    Status: <span id="conn-status" style="color: #3fb950;">Active</span>
+  </div>
+
   <script type="module" src="./index.ts"></script>
 </body>
 </html>
