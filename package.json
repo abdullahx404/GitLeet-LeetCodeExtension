@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
     "lint": "eslint src --ext ts",
     "format": "prettier --write \"src/**/*.{ts,html,css}\"",
     "package": "npm run build && node scripts/package.js"
@@ -20,6 +21,7 @@
     "eslint": "^8.57.0",
     "prettier": "^3.3.2",
     "typescript": "^5.5.2",
-    "vite": "^5.3.1"
+    "vite": "^5.3.1",
+    "vitest": "^1.6.0"
   }
 }

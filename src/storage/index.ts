@@ -1,27 +1,57 @@
 import { UserSettings, CachedProblem, SyncStats } from '../types';
 
 /**
- * Storage service managing chrome.storage.local interactions.
+ * StorageService encapsulates all asynchronous operations against chrome.storage.local.
  */
 export class StorageService {
   private static readonly SETTINGS_KEY = 'settings';
   private static readonly CACHE_KEY = 'cache';
   private static readonly STATS_KEY = 'stats';
 
+  /**
+   * Retrieves user configuration settings.
+   */
   public static async getSettings(): Promise<UserSettings | null> {
     const data = await chrome.storage.local.get(this.SETTINGS_KEY);
     return (data[this.SETTINGS_KEY] as UserSettings) || null;
   }
 
+  /**
+   * Persists user configuration settings.
+   */
   public static async saveSettings(settings: UserSettings): Promise<void> {
     await chrome.storage.local.set({ [this.SETTINGS_KEY]: settings });
   }
 
+  /**
+   * Retrieves the entire problem SHA and code hash cache dictionary.
+   */
   public static async getCache(): Promise<Record<string, CachedProblem>> {
     const data = await chrome.storage.local.get(this.CACHE_KEY);
     return (data[this.CACHE_KEY] as Record<string, CachedProblem>) || {};
   }
 
+  /**
+   * Updates or inserts a problem item in the cache dictionary.
+   */
+  public static async updateCacheProblem(problem: CachedProblem): Promise<void> {
+    const cache = await this.getCache();
+    cache[problem.problemNumber] = problem;
+    await chrome.storage.local.set({ [this.CACHE_KEY]: cache });
+  }
+
+  /**
+   * Removes a specific problem from the cache dictionary.
+   */
+  public static async removeCacheProblem(problemNumber: string): Promise<void> {
+    const cache = await this.getCache();
+    delete cache[problemNumber];
+    await chrome.storage.local.set({ [this.CACHE_KEY]: cache });
+  }
+
+  /**
+   * Retrieves synchronization statistics.
+   */
   public static async getStats(): Promise<SyncStats> {
     const data = await chrome.storage.local.get(this.STATS_KEY);
     return (
@@ -33,5 +63,19 @@ export class StorageService {
         lastSyncedProblem: null,
       }
     );
+  }
+
+  /**
+   * Persists synchronization statistics.
+   */
+  public static async saveStats(stats: SyncStats): Promise<void> {
+    await chrome.storage.local.set({ [this.STATS_KEY]: stats });
+  }
+
+  /**
+   * Completely clears all stored extension data.
+   */
+  public static async clearAll(): Promise<void> {
+    await chrome.storage.local.clear();
   }
 }
