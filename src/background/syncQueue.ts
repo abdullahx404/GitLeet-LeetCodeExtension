@@ -4,6 +4,7 @@ import { GitHubService } from '../github';
 import { buildGitHubPath, extractTitleSlug } from '../content/parser';
 import { utf8ToBase64 } from '../utils';
 import { ReadmeGenerator } from './readmeGenerator';
+import { AlarmService } from './alarms';
 
 export interface QueueItem {
   meta: SubmissionMetadata;
@@ -82,7 +83,18 @@ export class SyncQueue {
     } catch (err) {
       console.error('Error synchronizing submission to GitHub:', err);
       const errMsg = err instanceof Error ? err.message : 'Unknown REST failure';
-      this.notifyTab(item.tabId, { status: 'ERROR', error: errMsg });
+      
+      // Store in persistent offline queue for automatic retry
+      try {
+        const offlineQueue = (await StorageService.getOfflineQueue()) as SubmissionMetadata[];
+        offlineQueue.push(item.meta);
+        await StorageService.saveOfflineQueue(offlineQueue);
+        AlarmService.scheduleRetry(1);
+      } catch {
+        // Silently ignore storage failure during offline fallback
+      }
+
+      this.notifyTab(item.tabId, { status: 'ERROR', error: `${errMsg}. Queued for offline retry.` });
     } finally {
       this.isProcessing = false;
       if (this.queue.length > 0) {

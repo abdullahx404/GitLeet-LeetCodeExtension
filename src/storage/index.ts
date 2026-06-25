@@ -78,4 +78,21 @@ export class StorageService {
   public static async clearAll(): Promise<void> {
     await chrome.storage.local.clear();
   }
+
+  private static readonly OFFLINE_KEY = 'offline_queue';
+
+  /**
+   * Retrieves offline retry submission queue.
+   */
+  public static async getOfflineQueue(): Promise<unknown[]> {
+    const data = await chrome.storage.local.get(this.OFFLINE_KEY);
+    return (data[this.OFFLINE_KEY] as unknown[]) || [];
+  }
+
+  /**
+   * Persists offline retry submission queue.
+   */
+  public static async saveOfflineQueue(queue: unknown[]): Promise<void> {
+    await chrome.storage.local.set({ [this.OFFLINE_KEY]: queue });
+  }
 }

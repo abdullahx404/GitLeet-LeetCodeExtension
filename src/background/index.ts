@@ -1,10 +1,13 @@
 import { SyncQueue } from './syncQueue';
+import { AlarmService } from './alarms';
 import { SubmissionMetadata } from '../types';
 
 /**
  * Background Service Worker Entry Point.
  * Listens to submission events from content scripts and dispatches to SyncQueue.
  */
+
+AlarmService.setupAlarmListener();
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (message && typeof message === 'object' && 'type' in message) {
