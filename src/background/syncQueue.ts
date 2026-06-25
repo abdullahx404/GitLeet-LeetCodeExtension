@@ -3,6 +3,7 @@ import { StorageService } from '../storage';
 import { GitHubService } from '../github';
 import { buildGitHubPath, extractTitleSlug } from '../content/parser';
 import { utf8ToBase64 } from '../utils';
+import { ReadmeGenerator } from './readmeGenerator';
 
 /**
  * Computes a fast deterministic 32-bit integer hash of a string, formatted as hex.
@@ -68,7 +69,6 @@ export class SyncQueue {
       console.error('Error synchronizing submission to GitHub:', err);
     } finally {
       this.isProcessing = false;
-      // Continue draining queue
       if (this.queue.length > 0) {
         void this.processNext();
       }
@@ -89,7 +89,6 @@ export class SyncQueue {
     const cache = await StorageService.getCache();
     const existingCacheItem = cache[meta.problemNumber];
 
-    // Smart deduplication gate
     if (existingCacheItem && existingCacheItem.codeHash === currentHash) {
       console.warn(`Problem ${meta.problemNumber} skipped: Identical solution hash already uploaded.`);
       return false;
@@ -99,7 +98,6 @@ export class SyncQueue {
     const base64Code = utf8ToBase64(meta.sourceCode);
     const commitMsg = `Sync LeetCode ${meta.problemNumber || '0000'} - ${meta.problemTitle} (${meta.language})`;
 
-    // Check existing SHA from cache or remote
     const shaToPass = existingCacheItem ? existingCacheItem.fileSha : undefined;
 
     const res = await GitHubService.createOrUpdateFile(
@@ -124,6 +122,26 @@ export class SyncQueue {
 
     await StorageService.updateCacheProblem(updatedProblem);
     await this.updateSyncStats(meta);
+
+    // Trigger dynamic README generation and upload
+    try {
+      const latestStats = await StorageService.getStats();
+      const latestCache = await StorageService.getCache();
+      const mdContent = ReadmeGenerator.generate(latestStats, latestCache);
+      const base64Md = utf8ToBase64(mdContent);
+      const cleanRoot = settings.rootFolder.replace(/^\/+|\/+$/g, '').trim() || 'LeetCode';
+      const readmePath = `${cleanRoot}/README.md`;
+
+      await GitHubService.createOrUpdateFile(
+        settings,
+        readmePath,
+        base64Md,
+        'Update repository README index'
+      );
+      console.warn('Successfully refreshed repository README dashboard table.');
+    } catch (readmeErr) {
+      console.error('Failed to update repository README index:', readmeErr);
+    }
 
     console.warn(`Successfully synchronized ${meta.problemTitle} to GitHub.`);
     return true;
