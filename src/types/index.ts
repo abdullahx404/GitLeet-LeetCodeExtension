@@ -29,6 +29,8 @@ export interface CachedProblem {
   fileSha: string;
   codeHash: string;
   lastUpdated: number;
+  runtime?: string;
+  memory?: string;
 }
 
 export interface SyncStats {

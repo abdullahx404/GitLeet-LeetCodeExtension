@@ -3,6 +3,7 @@ import { GitHubService } from '../github';
 import { UserSettings } from '../types';
 
 const formEl = document.getElementById('settings-form') as HTMLFormElement | null;
+const repoUrlInput = document.getElementById('repo-url') as HTMLInputElement | null;
 const tokenInput = document.getElementById('github-token') as HTMLInputElement | null;
 const ownerInput = document.getElementById('repo-owner') as HTMLInputElement | null;
 const repoInput = document.getElementById('repo-name') as HTMLInputElement | null;
@@ -18,7 +19,31 @@ function showBanner(message: string, isSuccess: boolean): void {
   statusBanner.style.display = 'block';
 }
 
+function parseRepoSlug(rawUrl: string): { owner: string; name: string } {
+  const clean = rawUrl.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '').replace(/\/+$/, '');
+  const parts = clean.split('/');
+  return {
+    owner: parts[0] ? parts[0].trim() : '',
+    name: parts[1] ? parts[1].trim().replace(/\.git$/i, '') : '',
+  };
+}
+
+function updateExtractedFields(): void {
+  if (!repoUrlInput || !ownerInput || !repoInput) return;
+  const parsed = parseRepoSlug(repoUrlInput.value);
+  ownerInput.value = parsed.owner;
+  repoInput.value = parsed.name;
+}
+
+if (repoUrlInput) {
+  repoUrlInput.addEventListener('input', updateExtractedFields);
+  repoUrlInput.addEventListener('paste', () => {
+    setTimeout(updateExtractedFields, 10);
+  });
+}
+
 function collectSettings(): UserSettings {
+  updateExtractedFields();
   return {
     githubToken: tokenInput?.value.trim() || '',
     repoOwner: ownerInput?.value.trim() || '',
@@ -37,6 +62,10 @@ async function loadInitialSettings(): Promise<void> {
   if (repoInput) repoInput.value = existing.repoName;
   if (folderInput) folderInput.value = existing.rootFolder;
   if (autoSyncInput) autoSyncInput.checked = existing.autoSyncEnabled;
+
+  if (repoUrlInput && existing.repoOwner && existing.repoName) {
+    repoUrlInput.value = `https://github.com/${existing.repoOwner}/${existing.repoName}`;
+  }
 }
 
 async function handleTestClick(): Promise<void> {
@@ -44,6 +73,10 @@ async function handleTestClick(): Promise<void> {
   const settings = collectSettings();
   if (!settings.githubToken) {
     showBanner('Please enter a GitHub Personal Access Token to test.', false);
+    return;
+  }
+  if (!settings.repoOwner || !settings.repoName) {
+    showBanner('Please provide a valid GitHub Repository URL.', false);
     return;
   }
 
@@ -55,14 +88,18 @@ async function handleTestClick(): Promise<void> {
   testBtn.textContent = 'Test Connection';
 
   if (isValid) {
-    showBanner('Connection verified. Token is valid.', true);
+    showBanner('Connection verified. Repository accessible and token valid.', true);
   } else {
-    showBanner('Connection failed. Please check token permissions and validity.', false);
+    showBanner('Connection failed. Please check repository link and token permissions.', false);
   }
 }
 
 async function handleFormSubmit(): Promise<void> {
   const settings = collectSettings();
+  if (!settings.repoOwner || !settings.repoName) {
+    showBanner('Invalid repository link format. Ensure it follows https://github.com/owner/repo', false);
+    return;
+  }
   await StorageService.saveSettings(settings);
   showBanner('Settings saved successfully.', true);
 }

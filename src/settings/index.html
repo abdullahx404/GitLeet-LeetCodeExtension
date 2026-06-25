@@ -8,32 +8,39 @@
 </head>
 <body>
   <div class="settings-container">
-    <h1>LeetCode Sync Settings</h1>
-    <div class="subtitle">Configure your GitHub authentication and target synchronization repository.</div>
+    <h1>GitLeet Sync Configuration</h1>
+    <div class="subtitle">Connect your GitHub repository to enable automatic serverless LeetCode synchronization.</div>
 
     <form id="settings-form">
       <div class="form-group">
-        <label for="github-token">GitHub Fine-Grained Personal Access Token</label>
-        <div class="input-wrapper">
-          <input type="password" id="github-token" placeholder="github_pat_XXXXXX" required autocomplete="off">
+        <label for="repo-url">GitHub Repository URL or Slug</label>
+        <input type="text" id="repo-url" placeholder="https://github.com/abdullahx404/GitLeet-LeetCodeExtension" required spellcheck="false">
+        <div class="helper-text">Paste your full repository link here. We will automatically extract the owner and repository name.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="github-token">GitHub Personal Access Token</label>
+        <div class="input-wrapper" style="display: flex; gap: 8px;">
+          <input type="password" id="github-token" placeholder="github_pat_XXXXXX" required autocomplete="off" style="flex: 1;">
+          <a href="https://github.com/settings/tokens/new?description=GitLeet%20Sync&scopes=repo" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="display: flex; align-items: center; text-decoration: none; font-size: 13px; padding: 0 12px; white-space: nowrap; border-radius: 6px;">1-Click Generate Token</a>
         </div>
-        <div class="helper-text">
-          Generate a token with Contents (Read & Write) access in <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">GitHub Developer Settings</a>.
+        <div class="helper-text">Click the shortcut button above to open GitHub with required permissions pre-filled automatically.</div>
+      </div>
+
+      <div class="form-row" style="display: flex; gap: 16px;">
+        <div class="form-group" style="flex: 1;">
+          <label for="repo-owner">Extracted Owner</label>
+          <input type="text" id="repo-owner" placeholder="abdullahx404" required spellcheck="false" readonly style="background: #1f2937; color: #9ca3af;">
+        </div>
+
+        <div class="form-group" style="flex: 1;">
+          <label for="repo-name">Extracted Name</label>
+          <input type="text" id="repo-name" placeholder="GitLeet-LeetCodeExtension" required spellcheck="false" readonly style="background: #1f2937; color: #9ca3af;">
         </div>
       </div>
 
       <div class="form-group">
-        <label for="repo-owner">Repository Owner (Username or Organization)</label>
-        <input type="text" id="repo-owner" placeholder="e.g., abdullahx404" required spellcheck="false">
-      </div>
-
-      <div class="form-group">
-        <label for="repo-name">Repository Name</label>
-        <input type="text" id="repo-name" placeholder="e.g., LeetCode-Solutions" required spellcheck="false">
-      </div>
-
-      <div class="form-group">
-        <label for="root-folder">Root Folder Name inside Repository</label>
+        <label for="root-folder">Root Destination Folder</label>
         <input type="text" id="root-folder" value="LeetCode" required spellcheck="false">
       </div>
 

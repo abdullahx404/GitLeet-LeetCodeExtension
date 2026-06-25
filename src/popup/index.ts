@@ -52,4 +52,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  const guideBtn = document.getElementById('open-guide');
+  const guideBox = document.getElementById('guide-box');
+  if (guideBtn && guideBox) {
+    guideBtn.addEventListener('click', () => {
+      guideBox.style.display = guideBox.style.display === 'block' ? 'none' : 'block';
+    });
+  }
 });

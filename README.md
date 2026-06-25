@@ -33,6 +33,15 @@ Unlike other tools that rely on intermediate third-party backend servers or webh
 
 ---
 
+## How to Use (Quick Setup Guide)
+
+1. **Install Extension**: Load the `/dist` folder in `chrome://extensions` with Developer Mode enabled.
+2. **Open Settings**: Click the GitLeet extension icon in your toolbar and click **Settings**.
+3. **Connect Repository**: Click **1-Click Generate Token** shortcut, paste your full GitHub Repository URL and token.
+4. **Solve & Sync**: Submit any passing solution on LeetCode. Your code, runtime ms, and space MB will upload automatically!
+
+---
+
 ## System Architecture
 
 GitLeet operates on a direct, client-to-API communication model without intermediate servers.

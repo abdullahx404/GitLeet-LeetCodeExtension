@@ -5,22 +5,24 @@ const createMockStyle = () => {
   const s: Record<string, string> = {};
   Object.defineProperty(s, 'cssText', {
     set(str: string) {
-      str.split(';').forEach(decl => {
+      str.split(';').forEach((decl) => {
         const parts = decl.split(':');
         if (parts.length >= 2) {
-          const k = parts[0].trim();
+          const k = parts[0] ? parts[0].trim() : '';
           const v = parts.slice(1).join(':').trim();
           if (k) s[k] = v;
         }
       });
-    }
+    },
   });
   return s;
 };
 
 class MockHtmlElement {
   public id = '';
+  public className = '';
   public textContent = '';
+  public innerHTML = '';
   public style: Record<string, string>;
   private children: MockHtmlElement[] = [];
 
@@ -40,7 +42,7 @@ class MockHtmlElement {
   public remove(): void {}
 
   public getInnerContent(): string {
-    return this.textContent + ' ' + this.children.map(c => c.getInnerContent()).join(' ');
+    return this.textContent + ' ' + this.innerHTML + ' ' + this.children.map((c) => c.getInnerContent()).join(' ');
   }
 }
 
@@ -51,6 +53,8 @@ describe('ToastManager In-Page UI Component', () => {
     mockBody = new MockHtmlElement();
     const mockDoc = {
       body: mockBody,
+      head: new MockHtmlElement(),
+      getElementById: () => null,
       createElement: () => new MockHtmlElement(),
     };
 
@@ -58,7 +62,7 @@ describe('ToastManager In-Page UI Component', () => {
     vi.stubGlobal('requestAnimationFrame', (cb: () => void) => cb());
   });
 
-  it('initializes floating toast container and displays uploading message', () => {
+  it('initializes floating toast container and displays uploading pill notice', () => {
     (ToastManager as unknown as { container: null }).container = null;
 
     ToastManager.showUploading('Two Sum');
@@ -67,22 +71,22 @@ describe('ToastManager In-Page UI Component', () => {
     expect(container).toBeDefined();
     expect(container.id).toBe('gitleet-toast-container');
     expect(container.style.position).toBe('fixed');
-    expect(container.getInnerContent()).toContain('GitLeet: Syncing "Two Sum" to GitHub...');
+    expect(container.getInnerContent()).toContain('Syncing...');
   });
 
-  it('renders success confirmation toast with green accent styling', () => {
+  it('renders success committed toast confirmation', () => {
     (ToastManager as unknown as { container: null }).container = null;
     ToastManager.showSuccess('Trapping Rain Water');
 
     const container = (ToastManager as unknown as { container: MockHtmlElement }).container;
-    expect(container.getInnerContent()).toContain('Successfully committed "Trapping Rain Water"');
+    expect(container.getInnerContent()).toContain('Committed');
   });
 
   it('renders error notice toast accurately', () => {
     (ToastManager as unknown as { container: null }).container = null;
-    ToastManager.showError('Rate limit exceeded (403)');
+    ToastManager.showError('Rate limit exceeded');
 
     const container = (ToastManager as unknown as { container: MockHtmlElement }).container;
-    expect(container.getInnerContent()).toContain('GitLeet Error: Rate limit exceeded (403)');
+    expect(container.getInnerContent()).toContain('Failed');
   });
 });

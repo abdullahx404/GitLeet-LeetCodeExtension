@@ -84,7 +84,6 @@ export class SyncQueue {
       console.error('Error synchronizing submission to GitHub:', err);
       const errMsg = err instanceof Error ? err.message : 'Unknown REST failure';
       
-      // Store in persistent offline queue for automatic retry
       try {
         const offlineQueue = (await StorageService.getOfflineQueue()) as SubmissionMetadata[];
         offlineQueue.push(item.meta);
@@ -126,7 +125,11 @@ export class SyncQueue {
 
     const gitPath = buildGitHubPath(settings.rootFolder, meta);
     const base64Code = utf8ToBase64(meta.sourceCode);
-    const commitMsg = `Sync LeetCode ${meta.problemNumber || '0000'} - ${meta.problemTitle} (${meta.language})`;
+    
+    // Exact user requested commit message format
+    const timeStr = meta.runtime || '0 ms';
+    const spaceStr = meta.memory || '0 MB';
+    const commitMsg = `Time: ${timeStr}, Space: ${spaceStr} - ${meta.problemTitle} (${meta.language})`;
 
     const shaToPass = existingCacheItem ? existingCacheItem.fileSha : undefined;
 
@@ -148,6 +151,8 @@ export class SyncQueue {
       fileSha: newSha,
       codeHash: currentHash,
       lastUpdated: Date.now(),
+      runtime: timeStr,
+      memory: spaceStr,
     };
 
     await StorageService.updateCacheProblem(updatedProblem);
