@@ -50,10 +50,9 @@ export class GitHubService {
     retries = 0
   ): Promise<Response> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.BASE_URL}${endpoint}`;
-    const cleanToken = token.replace(/[^\x21-\x7E]/g, '');
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${cleanToken}`,
+      Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': this.API_VERSION,
       ...(options.headers as Record<string, string> | undefined),
     };
@@ -84,9 +83,9 @@ export class GitHubService {
    * Verifies if the provided configuration settings and Personal Access Token are valid.
    */
   public static async verifyCredentials(settings: UserSettings): Promise<boolean> {
-    const cleanOwner = settings.repoOwner ? settings.repoOwner.replace(/[^\x21-\x7E]/g, '') : '';
-    const cleanName = settings.repoName ? settings.repoName.replace(/[^\x21-\x7E]/g, '').replace(/\.git$/i, '') : '';
-    const cleanToken = settings.githubToken ? settings.githubToken.replace(/[^\x21-\x7E]/g, '') : '';
+    const cleanOwner = settings.repoOwner ? settings.repoOwner.replace(/['"\s]/g, '') : '';
+    const cleanName = settings.repoName ? settings.repoName.replace(/['"\s]/g, '').replace(/\.git$/i, '') : '';
+    const cleanToken = settings.githubToken ? settings.githubToken.replace(/['"\s]/g, '') : '';
 
     if (!cleanToken || !cleanOwner || !cleanName) {
       return false;

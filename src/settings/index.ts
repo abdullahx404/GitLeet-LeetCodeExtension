@@ -47,9 +47,9 @@ function collectSettings(): UserSettings {
     updateExtractedFields();
   }
   return {
-    githubToken: tokenInput?.value.replace(/[^\x21-\x7E]/g, '') || '',
-    repoOwner: ownerInput?.value.replace(/[^\x21-\x7E]/g, '') || '',
-    repoName: repoInput?.value.replace(/[^\x21-\x7E]/g, '').replace(/\.git$/i, '') || '',
+    githubToken: tokenInput?.value.replace(/['"\s]/g, '') || '',
+    repoOwner: ownerInput?.value.replace(/['"\s]/g, '') || '',
+    repoName: repoInput?.value.replace(/['"\s]/g, '').replace(/\.git$/i, '') || '',
     rootFolder: folderInput?.value.trim() || 'LeetCode',
     autoSyncEnabled: autoSyncInput?.checked ?? true,
   };
@@ -92,7 +92,7 @@ async function handleTestClick(): Promise<void> {
   if (isValid) {
     showBanner(`Connection verified! Connected to ${settings.repoOwner}/${settings.repoName}.`, true);
   } else {
-    showBanner(`Connection failed (401/404) for ${settings.repoOwner}/${settings.repoName}. If using a Fine-Grained token, ensure '${settings.repoName}' is selected under Repository Access with Contents read/write permissions.`, false);
+    showBanner(`Connection failed for ${settings.repoOwner}/${settings.repoName}. Check repository access and token scope.`, false);
   }
 }
 
