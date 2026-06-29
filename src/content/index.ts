@@ -5,6 +5,7 @@ import { ToastManager } from './toast';
 
 let lastSyncedTimestamp = 0;
 let lastSyncedHash = '';
+let lastSyncedTitle = '';
 let lastSubmitClickTime = 0;
 const sessionSyncedProblems = new Set<string>();
 
@@ -228,29 +229,31 @@ function triggerSync(meta: SubmissionMetadata): void {
   if (sessionSyncedProblems.has(problemKey)) {
     return;
   }
-  if (now - lastSyncedTimestamp < 5000 && lastSyncedHash === codeHash) {
+  if (now - lastSyncedTimestamp < 10000 && (lastSyncedTitle === meta.problemTitle || lastSyncedHash === codeHash)) {
     return;
   }
   lastSyncedTimestamp = now;
+  lastSyncedTitle = meta.problemTitle;
   lastSyncedHash = codeHash;
   sessionSyncedProblems.add(problemKey);
+
+  if (!chrome?.runtime?.id) {
+    ToastManager.showError('Extension reloaded! Please refresh this page (F5) to sync.');
+    return;
+  }
 
   console.warn('Syncing accepted LeetCode submission to GitHub:', meta.problemTitle);
   ToastManager.showUploading(meta.problemTitle);
 
   try {
-    if (!chrome?.runtime?.id) {
-      throw new Error('Extension context invalidated');
-    }
     chrome.runtime.sendMessage({
       type: 'SUBMISSION_ACCEPTED',
       payload: meta,
     }).catch(() => {
-      ToastManager.showError('Extension updated. Please refresh page (Ctrl+R).');
+      ToastManager.showError('Extension reloaded! Please refresh this page (F5) to sync.');
     });
-  } catch (err) {
-    console.warn('GitLeet context invalidated. Page refresh required:', err);
-    ToastManager.showError('Extension updated! Refresh page (Ctrl+R) to sync.');
+  } catch {
+    ToastManager.showError('Extension reloaded! Please refresh this page (F5) to sync.');
   }
 }
 
