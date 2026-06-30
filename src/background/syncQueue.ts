@@ -92,7 +92,10 @@ export class SyncQueue {
       await this.syncSubmission(item.meta, item.tabId);
     } catch (err) {
       console.error('Error synchronizing submission to GitHub:', err);
-      const errMsg = err instanceof Error ? err.message : 'Unknown REST failure';
+      let errMsg = err instanceof Error ? err.message : 'Unknown REST failure';
+      if (errMsg.includes('(404)')) {
+        errMsg = "Repo not found or Token lacks 'repo' (write) scope";
+      }
       
       try {
         const offlineQueue = (await StorageService.getOfflineQueue()) as SubmissionMetadata[];
@@ -103,7 +106,7 @@ export class SyncQueue {
         // Silently ignore storage failure during offline fallback
       }
 
-      this.notifyTab(item.tabId, { status: 'ERROR', error: `${errMsg}. Queued for offline retry.` });
+      this.notifyTab(item.tabId, { status: 'ERROR', error: errMsg });
     } finally {
       this.isProcessing = false;
       if (this.queue.length > 0) {

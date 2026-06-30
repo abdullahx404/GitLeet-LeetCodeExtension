@@ -79,22 +79,41 @@ export class GitHubService {
     return response;
   }
 
+  private static clean(settings: UserSettings): { owner: string; name: string; token: string } {
+    return {
+      owner: (settings.repoOwner || '').replace(/['"\s]/g, ''),
+      name: (settings.repoName || '').replace(/['"\s]/g, '').replace(/\.git$/i, ''),
+      token: (settings.githubToken || '').replace(/['"\s]/g, ''),
+    };
+  }
+
   /**
-   * Verifies if the provided configuration settings and Personal Access Token are valid.
+   * Verifies if the provided configuration settings and Personal Access Token are valid and have write access.
    */
   public static async verifyCredentials(settings: UserSettings): Promise<boolean> {
-    const cleanOwner = settings.repoOwner ? settings.repoOwner.replace(/['"\s]/g, '') : '';
-    const cleanName = settings.repoName ? settings.repoName.replace(/['"\s]/g, '').replace(/\.git$/i, '') : '';
-    const cleanToken = settings.githubToken ? settings.githubToken.replace(/['"\s]/g, '') : '';
+    const { owner, name, token } = this.clean(settings);
 
-    if (!cleanToken || !cleanOwner || !cleanName) {
+    if (!token || !owner || !name) {
       return false;
     }
 
     try {
-      const endpoint = `/repos/${encodeURIComponent(cleanOwner)}/${encodeURIComponent(cleanName)}`;
-      const response = await this.request(endpoint, cleanToken);
-      return response.ok;
+      const endpoint = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+      const response = await this.request(endpoint, token);
+      if (!response.ok) return false;
+
+      let data: { permissions?: { push?: boolean; admin?: boolean; maintain?: boolean } } | null = null;
+      if (typeof response.json === 'function') {
+        try {
+          data = (await response.json()) as { permissions?: { push?: boolean; admin?: boolean; maintain?: boolean } };
+        } catch {
+          // Ignore json parse error if response body is empty
+        }
+      }
+      if (data && data.permissions && !data.permissions.push && !data.permissions.admin && !data.permissions.maintain) {
+        return false;
+      }
+      return true;
     } catch {
       return false;
     }
@@ -106,8 +125,9 @@ export class GitHubService {
    * Throws GitHubApiError on authentication or permissions failure.
    */
   public static async getFileSha(settings: UserSettings, filePath: string): Promise<string | null> {
-    const endpoint = `/repos/${encodeURIComponent(settings.repoOwner)}/${encodeURIComponent(settings.repoName)}/contents/${encodeURIComponent(filePath).replace(/%2F/g, '/')}`;
-    const response = await this.request(endpoint, settings.githubToken);
+    const { owner, name, token } = this.clean(settings);
+    const endpoint = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodeURIComponent(filePath).replace(/%2F/g, '/')}`;
+    const response = await this.request(endpoint, token);
 
     if (response.status === 404) {
       return null;
@@ -138,7 +158,8 @@ export class GitHubService {
     commitMessage: string,
     existingSha?: string | null
   ): Promise<GitHubFileResponse> {
-    const endpoint = `/repos/${encodeURIComponent(settings.repoOwner)}/${encodeURIComponent(settings.repoName)}/contents/${encodeURIComponent(filePath).replace(/%2F/g, '/')}`;
+    const { owner, name, token } = this.clean(settings);
+    const endpoint = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodeURIComponent(filePath).replace(/%2F/g, '/')}`;
 
     // If existingSha wasn't explicitly supplied, check if file already exists
     let shaToUse = existingSha;
@@ -155,7 +176,7 @@ export class GitHubService {
       payload.sha = shaToUse;
     }
 
-    const response = await this.request(endpoint, settings.githubToken, {
+    const response = await this.request(endpoint, token, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
