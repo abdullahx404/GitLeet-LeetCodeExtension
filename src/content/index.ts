@@ -80,22 +80,24 @@ function extractFullProblemMarkdown(title: string, probNum: string): string {
         .split('\n')
         .map((l) => l.trim())
         .filter((l) => Boolean(l) && l !== '**' && l !== '****');
-      return '\n\n' + lines.join('\n\n') + '\n\n';
+      return '\n\n' + lines.map((l) => (l.startsWith('>') ? l : `> ${l}`)).join('\n') + '\n\n';
     })
     .replace(/<br\s*\/?>/ig, '\n')
     .replace(/<\/(?:p|div|ul|ol|h[1-6])>/ig, '\n\n')
     .replace(/<(?:strong|b)[^>]*>(.*?)<\/(?:strong|b)>/ig, '**$1**')
     .replace(/<code[^>]*>(.*?)<\/code>/ig, '`$1`')
-    .replace(/<li[^>]*>(.*?)<\/li>/ig, '- $1\n')
+    .replace(/<li[^>]*>(.*?)<\/li>/ig, '\n\n- $1\n\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&');
 
+  text = text.replace(/`+/g, '`').replace(/`\s*`([^`]+)`\s*`/g, '`$1`');
+
   text = text
-    .replace(/\*\*\s*(Example\s+\d+|Constraints)\s*:?\s*\*\*/ig, '$1:')
-    .replace(/\b(Example\s+\d+|Constraints)\b\s*:/ig, '\n\n**$1:**\n\n')
+    .replace(/\*\*\s*(Example\s+\d+|Constraints|Follow-up)\s*:?\s*\*\*/ig, '$1:')
+    .replace(/\b(Example\s+\d+|Constraints|Follow-up)\b\s*:/ig, '\n\n**$1:**\n\n')
     .replace(/\*\*\s*(Input|Output|Explanation)\s*:?\s*\*\*/ig, '$1:')
     .replace(/\b(Input|Output|Explanation)\b\s*:/ig, '\n\n**$1:** ')
     .replace(/\*\*\s*\*\*/g, '');
@@ -103,7 +105,7 @@ function extractFullProblemMarkdown(title: string, probNum: string): string {
   const finalLines = text
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l !== '**' && l !== '****');
+    .filter((l) => l !== '**' && l !== '****' && l !== '`' && l !== '``');
 
   text = finalLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
