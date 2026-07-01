@@ -71,10 +71,15 @@ function extractFullProblemMarkdown(title: string, probNum: string): string {
         .replace(/&amp;/g, '&');
 
       clean = clean
-        .replace(/(?:\*\*)?(Input|Output|Explanation)(?:\*\*)?\s*:/ig, '\n**$1:**')
-        .trim();
+        .replace(/\*\*\s*(Input|Output|Explanation)\s*:?\s*\*\*/ig, '$1:')
+        .replace(/\*\*\s*(Input|Output|Explanation)\s*:\s*/ig, '$1: ')
+        .replace(/(Input|Output|Explanation)\s*:\s*\*\*/ig, '$1: ')
+        .replace(/\b(Input|Output|Explanation)\b\s*:/ig, '\n**$1:** ');
 
-      const lines = clean.split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = clean
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => Boolean(l) && l !== '**' && l !== '****');
       return '\n\n' + lines.join('\n\n') + '\n\n';
     })
     .replace(/<br\s*\/?>/ig, '\n')
@@ -86,12 +91,21 @@ function extractFullProblemMarkdown(title: string, probNum: string): string {
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/(Example\s+\d+)\s*:/ig, '\n\n**$1:**\n\n')
-    .replace(/(Constraints)\s*:/ig, '\n\n**$1:**\n\n')
-    .replace(/(?:\*\*)?(Input|Output|Explanation)(?:\*\*)?\s*:/ig, '\n\n**$1:**')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+    .replace(/&amp;/g, '&');
+
+  text = text
+    .replace(/\*\*\s*(Example\s+\d+|Constraints)\s*:?\s*\*\*/ig, '$1:')
+    .replace(/\b(Example\s+\d+|Constraints)\b\s*:/ig, '\n\n**$1:**\n\n')
+    .replace(/\*\*\s*(Input|Output|Explanation)\s*:?\s*\*\*/ig, '$1:')
+    .replace(/\b(Input|Output|Explanation)\b\s*:/ig, '\n\n**$1:** ')
+    .replace(/\*\*\s*\*\*/g, '');
+
+  const finalLines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l !== '**' && l !== '****');
+
+  text = finalLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
   if (!text) {
     text = 'Problem description not available.';
